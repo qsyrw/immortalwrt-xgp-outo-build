@@ -1,0 +1,44 @@
+name: Build and Release
+
+on:
+  schedule:
+    - cron: '0 18 * * 4'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    env:
+      TZ: Asia/Shanghai
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup environment
+        run: |
+          sudo ./install-env.sh
+
+      - name: Cache OpenWrt dl and toolchain
+        uses: actions/cache@v3
+        with:
+          path: |
+            immortalwrt/dl
+            immortalwrt/staging_dir
+          key: ${{ runner.os }}-openwrt-${{ hashFiles('xgp.config') }}
+
+      - name: Build ImmortalWrt
+        run: |
+          bash build-immortalwrt-gha.sh
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p release_assets
+          cp immortalwrt/bin/targets/rockchip/armv8/*.img.gz release_assets/ || true
+          cp immortalwrt/bin/targets/rockchip/armv8/*.manifest release_assets/ || true
+          cp immortalwrt/bin/targets/rockchip/armv8/*.buildinfo release_assets/ || true
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: release_assets/
