@@ -61,10 +61,25 @@ jobs:
           key: ${{ runner.os }}-immortalwrt-${{ hashFiles('xgp.config') }}
 
       - name: Build ImmortalWrt
-        working-directory: ${{ github.workspace }}
+        shell: bash
         run: |
+          set -e
+
+          echo "=== DEBUG: where am I ==="
+          pwd
+          echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
+
+          echo "=== cd to workspace ==="
+          cd "$GITHUB_WORKSPACE"
+
+          echo "=== list repo files ==="
           ls -lah
+
+          echo "=== make script executable ==="
           chmod +x build-immortalwrt-gha.sh
+
+          echo "=== run build script ==="
+          ./build-immortalwrt-gha.sh
 
       - name: Run build script
         shell: bash
@@ -85,7 +100,7 @@ jobs:
           cp immortalwrt/bin/targets/rockchip/armv8/*.img.gz release/ 2>/dev/null || true
           cp immortalwrt/bin/targets/rockchip/armv8/*.manifest release/ 2>/dev/null || true
           cp immortalwrt/bin/targets/rockchip/armv8/*.buildinfo release/ 2>/dev/null || true
-          cp immortalwrt/bin/targets/rockchip/armv8/sha256sums release/ 2>/dev/null || true
+          cp immortalwrt/bin/targets/rockchip/armv  8/sha256sums release/ 2>/dev/null || true
           ls -lah release || true
 
       - name: Upload artifacts
