@@ -22,12 +22,26 @@ jobs:
           df -h
           free -h
           nproc
-
+          
       - name: Maximize build space
         uses: easimon/maximize-build-space@master
         with:
           root-reserve-mb: 10240
           swap-size-mb: 1024
+          remove-dotnet: 'false'
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Debug workspace after checkout
+        shell: bash
+        run: |
+          echo "PWD=$(pwd)"
+          echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
+          ls -lah
+          find . -maxdepth 2 -type f
 
       - name: Install build dependencies
         run: |
@@ -64,21 +78,8 @@ jobs:
         shell: bash
         run: |
           set -e
-
-          echo "=== DEBUG: where am I ==="
-          pwd
-          echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
-
-          echo "=== cd to workspace ==="
           cd "$GITHUB_WORKSPACE"
-
-          echo "=== list repo files ==="
-          ls -lah
-
-          echo "=== make script executable ==="
           chmod +x build-immortalwrt-gha.sh
-
-          echo "=== run build script ==="
           ./build-immortalwrt-gha.sh
 
       - name: Run build script
