@@ -12,17 +12,12 @@ jobs:
       TZ: Asia/Shanghai
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
       - name: Show system info
         run: |
           df -h
           free -h
           nproc
-          
+
       - name: Maximize build space
         uses: easimon/maximize-build-space@master
         with:
@@ -30,18 +25,16 @@ jobs:
           swap-size-mb: 1024
           remove-dotnet: 'false'
 
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      - name: Debug workspace after checkout
-        shell: bash
+      - name: Debug workspace
         run: |
-          echo "PWD=$(pwd)"
-          echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
+          pwd
           ls -lah
-          find . -maxdepth 2 -type f
+          test -f build-immortalwrt-gha.sh
 
       - name: Install build dependencies
         run: |
@@ -74,23 +67,16 @@ jobs:
             immortalwrt/staging_dir
           key: ${{ runner.os }}-immortalwrt-${{ hashFiles('xgp.config') }}
 
-      - name: Build ImmortalWrt
-        shell: bash
-        run: |
-          set -e
-          cd "$GITHUB_WORKSPACE"
-          chmod +x build-immortalwrt-gha.sh
-          ./build-immortalwrt-gha.sh
-
-      - name: Run build script
+      - name: Build ImmortalWrt (capture log)
         shell: bash
         run: |
           set -o pipefail
-          ./build-immortalwrt-gha.sh 2>&1 | tee build_script.log || true
-          # if build log shows error, fail and show first error
-          if grep -q -E "error:|^make\\[|^ERROR:" build_script.log; then
-            echo ">>> Build had errors — first match:"
-            grep -n -E "error:|^make\\[|^ERROR:" build_script.log | head -n 1
+          chmod +x build-immortalwrt-gha.sh
+          ./build-immortalwrt-gha.sh 2>&1 | tee build.log || true
+
+          if grep -n -E "error: .*failed|^make.*Error|^ERROR:" build.log; then
+            echo "❌ Build failed, first error:"
+            grep -n -E "error: .*failed|^make.*Error|^ERROR:" build.log | head -n 1
             exit 1
           fi
 
@@ -100,9 +86,9 @@ jobs:
           mkdir -p release
           cp immortalwrt/bin/targets/rockchip/armv8/*.img.gz release/ 2>/dev/null || true
           cp immortalwrt/bin/targets/rockchip/armv8/*.manifest release/ 2>/dev/null || true
-          cp immortalwrt/bin/targets/rockchip/armv8/*.buildinfo release/ 2>/dev/null || true
-          cp immortalwrt/bin/targets/rockchip/armv  8/sha256sums release/ 2>/dev/null || true
-          ls -lah release || true
+          cp immortalwrt/bin/targets/rockchip/armv8/*buildinfo release/ 2>/dev/null || true
+          cp immortalwrt/bin/targets/rockchip/armv8/sha256sums release/ 2>/dev/null || true
+          ls -lah release
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
